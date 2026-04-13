@@ -19,7 +19,7 @@ def limpiar_html(texto):
     return re.sub('<[^<]+?>', '', texto)
 
 st.title("🔬 Portal de Vigilancia Microbiológica")
-st.caption("Filtro inteligente de literatura científica para Isaac")
+st.caption("Filtro inteligente de literatura científica")
 
 # --- 2. BARRA LATERAL ---
 with st.sidebar:

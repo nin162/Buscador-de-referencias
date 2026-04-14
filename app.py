@@ -28,7 +28,8 @@ with st.sidebar:
         "Nature Microbiology": "https://www.nature.com/nmicrobiol.rss",
         "CDC - EID Journal": "https://wwwnc.cdc.gov/eid/rss/current.xml",
         "ScienceDaily": "https://www.sciencedaily.com/rss/plants_animals/microbiology.xml",
-        "BioMed Central": "https://microbiomejournal.biomedcentral.com/articles/most-recent/rss.xml"
+        "BioMed Central": "https://microbiomejournal.biomedcentral.com/articles/most-recent/rss.xml",
+        "Biologia Molecular Mexico": "https://pwf.fkb.mybluehost.me/"
     }
     seleccion = st.multiselect("Fuentes:", options=list(fuentes_dict.keys()), default=list(fuentes_dict.keys())[:2])
     cantidad = st.slider("Noticias por fuente:", 1, 10, 3)

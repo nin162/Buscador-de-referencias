@@ -29,7 +29,8 @@ with st.sidebar:
         "CDC - EID Journal": "https://wwwnc.cdc.gov/eid/rss/current.xml",
         "ScienceDaily": "https://www.sciencedaily.com/rss/plants_animals/microbiology.xml",
         "BioMed Central": "https://microbiomejournal.biomedcentral.com/articles/most-recent/rss.xml",
-        "Biología Molecular México": "https://invdes.com.mx/category/ciencia/biotecnologia/feed/"
+        "BioMol y Genética (MX)": "https://www.agenciasinc.es/rss/temas/biomedicina-y-salud", 
+        "Ciencia y Biotecnología": "https://invdes.com.mx/feed/"
     }
     seleccion = st.multiselect("Fuentes:", options=list(fuentes_dict.keys()), default=list(fuentes_dict.keys())[:2])
     cantidad = st.slider("Noticias por fuente:", 1, 10, 3)
@@ -42,6 +43,8 @@ titulos_vistos = set()
 if seleccion:
     for fuente in seleccion:
         feed = feedparser.parse(fuentes_dict[fuente])
+        if not feed.entries:
+            st.sidebar.warning(f"⚠️ La fuente {fuente} no respondió o está vacía.")
         for entry in feed.entries[:cantidad]:
             # Limpiamos el título para evitar duplicados y errores de <i>
             titulo_puro = limpiar_html(entry.title)

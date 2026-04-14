@@ -2,6 +2,7 @@ import streamlit as st
 import feedparser
 import datetime
 import re
+import requests
 
 # --- 1. CONFIGURACIÓN ---
 st.set_page_config(page_title="Portal QFB", page_icon="🔬", layout="wide")
@@ -26,45 +27,58 @@ with st.sidebar:
     st.header("Configuración")
     fuentes_dict = {
         "Nature Microbiology": "https://www.nature.com/nmicrobiol.rss",
-        "CDC - EID Journal": "https://wwwnc.cdc.gov/eid/rss/current.xml",
+        "CDC - Enfermedades EID": "https://wwwnc.cdc.gov/eid/rss/current.xml",
         "ScienceDaily": "https://www.sciencedaily.com/rss/plants_animals/microbiology.xml",
-        "BioMed Central": "https://microbiomejournal.biomedcentral.com/articles/most-recent/rss.xml",
-        "BioMol y Genética (MX)": "https://www.agenciasinc.es/rss/temas/biomedicina-y-salud", 
+        "BioMed Central (Microbiome)": "https://microbiomejournal.biomedcentral.com/articles/most-recent/rss.xml",
+        "BioMol y Genética (SINC)": "https://www.agenciasinc.es/rss/temas/biomedicina-y-salud",
         "Ciencia y Biotecnología": "https://invdes.com.mx/feed/"
     }
     seleccion = st.multiselect("Fuentes:", options=list(fuentes_dict.keys()), default=list(fuentes_dict.keys())[:2])
     cantidad = st.slider("Noticias por fuente:", 1, 10, 3)
     busqueda = st.text_input("🔍 Filtrar por palabra:")
 
-# --- 3. LÓGICA DE PROCESAMIENTO (UNA SOLA VEZ) ---
+# --- 3. PROCESAMIENTO DE DATOS (CON DISFRAZ DE NAVEGADOR) ---
 noticias_totales = []
 titulos_vistos = set()
 
 if seleccion:
     for fuente in seleccion:
-        feed = feedparser.parse(fuentes_dict[fuente])
-        if not feed.entries:
-            st.sidebar.warning(f"⚠️ La fuente {fuente} no respondió o está vacía.")
-        for entry in feed.entries[:cantidad]:
-            # Limpiamos el título para evitar duplicados y errores de <i>
-            titulo_puro = limpiar_html(entry.title)
-            id_titulo = titulo_puro.strip().lower()
+        try:
+            # Creamos el "disfraz" (User-Agent)
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
             
-            if id_titulo not in titulos_vistos:
-                if busqueda.lower() in id_titulo:
-                    # Detección de acceso
-                    meta = (entry.get('description', '') + entry.title).lower()
-                    es_abierto = any(p in meta for p in ["open access", "full text", "free", "oa", "creative commons"]) or \
-                                 fuente in ["CDC - EID Journal", "BioMed Central"]
-                    
-                    noticias_totales.append({
-                        "titulo": titulo_puro,
-                        "link": entry.link,
-                        "fuente": fuente,
-                        "fecha": entry.get('published', 'N/A'),
-                        "acceso": "Abierto" if es_abierto else "Suscripción/Duda"
-                    })
-                    titulos_vistos.add(id_titulo)
+            # Descargamos el contenido de la página primero
+            response = requests.get(fuentes_dict[fuente], headers=headers, timeout=10)
+            
+            # Ahora le pasamos ese contenido a feedparser
+            feed = feedparser.parse(response.content)
+            
+            if not feed.entries:
+                st.sidebar.warning(f"⚠️ {fuente} respondió, pero no tiene noticias hoy.")
+                continue
+
+            for entry in feed.entries[:cantidad]:
+                titulo_puro = limpiar_html(entry.title)
+                id_titulo = titulo_puro.strip().lower()
+                
+                if id_titulo not in titulos_vistos:
+                    if busqueda.lower() in id_titulo:
+                        # Detección de acceso (mejorada)
+                        meta = (entry.get('description', '') + entry.title).lower()
+                        es_abierto = any(p in meta for p in ["open access", "full text", "free", "oa", "creative commons"]) or \
+                                     fuente in ["CDC - EID Journal", "BioMed Central"]
+                        
+                        noticias_totales.append({
+                            "titulo": titulo_puro,
+                            "link": entry.link,
+                            "fuente": fuente,
+                            "fecha": entry.get('published', 'N/A'),
+                            "acceso": "Abierto" if es_abierto else "Suscripción/Duda"
+                        })
+                        titulos_vistos.add(id_titulo)
+        
+        except Exception as e:
+            st.sidebar.error(f"❌ Error de conexión con {fuente}")
 
 # --- 4. INTERFAZ VISUAL ---
 c1, c2, c3 = st.columns(3)
